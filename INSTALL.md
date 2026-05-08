@@ -14,12 +14,12 @@
 2. **添加 marketplace**（粘贴下面这行到聊天框，回车）：
 
    ```
-   /plugin marketplace add wangchengtai/skybear-uploader
+   /plugin marketplace add ctwang54-create/skybear-uploader
    ```
 
-   > 如果你的同事 Github 用户名不一样，把 `wangchengtai` 换成实际 owner。
-   > 如果是公司 GitHub 组织，写 `webuy-org/skybear-uploader`。
-   > 私有 repo 需要先在 Cowork 设置里授权 GitHub 账号。
+   > 私有 repo 需要先在 Cowork 设置里授权 GitHub 账号（Settings → Integrations → GitHub）。
+   > 同事必须先被加为 repo collaborator 才能 clone：
+   > `gh repo add-collaborator ctwang54-create/skybear-uploader <他的-github-用户名>`
 
 3. **安装 plugin**：
 
