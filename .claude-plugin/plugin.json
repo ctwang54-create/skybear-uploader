@@ -1,0 +1,15 @@
+{
+  "name": "skybear-uploader",
+  "version": "0.1.0",
+  "description": "Upload Skybear travel package (G-Group) from a PDF brochure as draft. Verified end-to-end on UAT 2026-05-08 with WBMXMN sample (wt_tour 11571 + wt_travel_tour 27935).",
+  "author": {
+    "name": "wangchengtai"
+  },
+  "keywords": [
+    "skybear",
+    "travel",
+    "webuy",
+    "package-upload",
+    "browser-automation"
+  ]
+}
