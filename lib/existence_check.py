@@ -38,6 +38,11 @@ class ExistenceReport:
 def check(settings: Settings, type_code: str, tour_code: str) -> ExistenceReport:
     """3 个 SELECT — 决定 Step 1 / Step 2 / Step 3 各自是 NEW 还是 REUSE.
 
+    **For developers only** — Cowork plugin colleagues do NOT call this.
+    The runtime SKILL.md uses Skybear's Package List search UI to look up
+    tour_id after Modal Save, so colleagues don't need to configure
+    SKYBEAR_RO_MYSQL_* env vars.
+
     Phase 0 关键发现 (#5)：即使 wt_tour 已存在，wt_travel_tour 关联可能没建。
     本 check 只回答 "wt_travel 行存在与否"，关联是 Phase 2 自动化的职责。
     """

@@ -112,7 +112,7 @@ TM/TL is actually a leader-picker, not free text. Use the *exact* method per row
 Sanity-check the auto-filled Pax Type field shows `G-Group Tr`. If anything
 else (FIT, MICE, ALTITUDE), abort with "v1 only supports G-Group".
 
-### 2c. Save modal → query new tour_id (Phase 3 corrected)
+### 2c. Save modal → find new tour_id via UI search (no Python deps required)
 
 **Correction (Phase 3 finding #1 + #5)**: Modal Save does **NOT** redirect.
 The page stays on `packageList`. Also, a confirmation dialog appears.
@@ -125,18 +125,28 @@ click(".el-message-box button.el-button--primary"  // text "Confirm")
 wait(4s)
 # Modal closes; URL is still on packageList. Backend has inserted the new wt_tour.
 
-# Read the new tour_id from RO MySQL slave (the search/list UI doesn't auto-refresh).
-from lib.config import load_settings
-from lib.db import ro_connection
-with ro_connection(load_settings()) as conn, conn.cursor() as cur:
-    cur.execute("SELECT id FROM wt_tour WHERE tour_code=%s AND deleted_status=0",
-                (tour_code.full,))
-    new_tour_id = cur.fetchone()['id']
+# Find the new tour_id via the Package List search UI
+# (works for any colleague — no RO MySQL credentials needed)
+1. Focus the "Tour Code" search textbox at the top of Package List
+2. Use real keyboard `computer.type(tour_code.full)` — e.g. "12WBMXMN10/26MF"
+3. Press Escape if an autocomplete dropdown appears
+4. Click the "Search" button
+5. Wait 2s for the list to refresh
+6. The first row in the list should match the new tour_code; capture its
+   "Modify" link href — the URL pattern is:
+     /#/packageAirlineMaintenance/editPackage?id=<NNN>&type=edit
+   Extract NNN as new_tour_id.
 
 navigate(tab, f"{base_url}/#/packageAirlineMaintenance/editPackage?id={new_tour_id}&type=edit")
 location.reload()
 wait(3s)
 ```
+
+**Optional dev shortcut** (skip if `.env` not configured):
+If the developer has `SKYBEAR_RO_MYSQL_*` env vars set, they can use
+`lib.existence_check` to query the slave DB directly. Colleagues using the
+plugin via Cowork should NOT need to configure this — the UI-search path
+above is the supported runtime flow.
 
 If validation errors appeared instead (red text under fields, dialog stays open):
 - Common cause: dates set via JS setter only show in DOM but v-model is empty.

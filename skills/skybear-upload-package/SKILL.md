@@ -58,6 +58,19 @@ to "把这个配套上架到 skybear" / "create new tour code" / "上传配套�
 ## Flow
 
 ```
+0. ENV CHOICE (default: prod)
+   Ask the Planner ONCE per session via AskUserQuestion:
+     "Upload to which environment?"
+       a) Production — https://travel.webuysg.com  (推荐)
+       b) UAT test  — https://test01.travel.webuy.ren
+   Store the chosen base_url for the rest of the session.
+   If Planner says "prod" / "生产" / "正式" / nothing → use Production.
+   If "uat" / "test" / "测试" → use UAT.
+
+   IMPORTANT: All subsequent UI navigation, Chrome tabs, and verify steps
+   MUST use the chosen base_url. Skill files reference URLs symbolically as
+   {base_url}; substitute the chosen one.
+
 1. INTAKE
    1a. Receive PDF attachment
    1b. If PDF > 20MB: rasterize each page to PNG (1600px wide) using
