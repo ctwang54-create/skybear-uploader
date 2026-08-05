@@ -39,6 +39,7 @@ skybear-uploader/
 │   │
 │   ├── image_spec.py       # the house standard, and why each number is that
 │   ├── pdf_images.py       # extract + classify the brochure's own photos
+│   ├── catalogue_source.py # Webuy's own published tours as a photo library
 │   ├── photo_source.py     # web fallback, mirroring webuy-itinerary-creation
 │   ├── image_norm.py       # detail-aware 4:3 crop → 1440×1080 JPEG
 │   ├── image_plan.py       # slot assignment, gap tracking, materialise
@@ -114,14 +115,23 @@ sampling the OSS originals behind a live product gave 1080-class images at
 hero crop. `lib/image_spec.py` carries the measurements behind every
 threshold, including why the upscale ceiling is 2.0 and not 1.65.
 
-**The web fallback needs keys to be any good.** It mirrors the rules in the
-sibling `webuy-itinerary-creation` repo — Shutterstock → Unsplash → Pexels →
-Wikimedia Commons, GPS-gated, judged on accuracy before beauty. With no keys
-set only Commons is reachable, and Commons is an archive rather than a photo
-library: a launch-sample run got mineral specimens for "Keketuohai", locator
-maps of China for "Urumqi", and a road sign for "Urho Ghost City". 4 of 48
-candidates were usable. Set `UNSPLASH_ACCESS_KEY` / `PEXELS_API_KEY` /
-`SHUTTERSTOCK_TOKEN` before relying on it.
+**Webuy's own catalogue is the second source, before stock.** A new Guizhou
+package visits the waterfalls the live Guizhou package already sells, so
+`catalogue_source.py` harvests images off sibling products on
+`webuytravel.sg`. They are licensed, in house style, correctly sized, and
+labelled by the CMS. On the launch samples that took the three plans from
+3/5/4 unfilled days to 0/1/0. Coverage is uneven — it works where a similar
+product is published, and WBCHET got nothing because no live tour visits
+Shanxi.
+
+**Open stock is the last resort, and it needs keys.** It mirrors the rules
+in the sibling `webuy-itinerary-creation` repo — Shutterstock → Unsplash →
+Pexels → Wikimedia Commons, GPS-gated, judged on accuracy before beauty.
+With no keys set only Commons is reachable, and Commons is an archive rather
+than a photo library: a launch-sample run got mineral specimens for
+"Keketuohai", locator maps of China for "Urumqi", and a road sign for "Urho
+Ghost City". 4 of 48 candidates were usable. Set `UNSPLASH_ACCESS_KEY` /
+`PEXELS_API_KEY` / `SHUTTERSTOCK_TOKEN` before relying on it.
 
 **Nothing uploads unreviewed.** `preview.py` renders a self-contained page
 showing every image with its provenance, upscale factor and the hero's actual
