@@ -95,7 +95,35 @@ for. Two reasons show up, and they need different fixes:
   the file is just too small. Worth telling the Planner: the product team may
   have a full-resolution original of exactly the right photo.
 
-## Step 4 — Fill the gaps from the web
+## Step 4a — Fill the gaps from Webuy's own catalogue first
+
+Before reaching for stock, check whether Webuy already owns a photo of the
+landmark. A new Guizhou package visits the waterfalls the live Guizhou
+package already sells, and those images are licensed, in house style,
+correctly sized, and labelled by the CMS rather than by a designer.
+
+```python
+from lib.catalogue_source import HARVEST_JS, parse_harvest, probe, fetch, match
+```
+
+Find sibling products on `https://webuytravel.sg/china-tours` (or the
+matching regional index), open each one, and run `HARVEST_JS` in the
+browser — the listing pages are behind Cloudflare, so this step needs the
+browser rather than plain HTTP. Then `match()` the harvested alt text
+against each gap's subjects, `probe()` to confirm the size, and `fetch()`.
+
+Coverage is uneven and worth reporting. On the launch samples, `tours/115`
+plus `tours/108` covered every WBCKWE landmark but one; `tours/112` covered
+most of WBCURC's Xinjiang; and WBCHET got nothing at all, because no live
+tour visits Shanxi and the Inner Mongolia product carries a single image.
+
+**Still look at every candidate.** The alt text is reliable about *what the
+trip item is called*; it says nothing about whether the frame is usable. On
+the launch run six catalogue images were rejected on sight for baked-in
+text ("贵阳甲秀楼", "Hello, 梵净山", a G217 road sign, a 魔鬼城 entrance
+board) and one — tagged "Bagua Field" — turned out to be a coastal city.
+
+## Step 4b — Fill what's left from the web
 
 ```python
 from lib.photo_source import search, download, available_sources

@@ -264,17 +264,49 @@ def compose_carousel(plan: ImagePlan, order: list[str],
     return plan
 
 
-def add_web(plan: ImagePlan, slot: str, position: int, *, subject: str,
-            url: str, local: str | Path, credit: str = "",
-            license: str = "") -> ImagePlan:
-    """Record an agent-chosen web photo against a gap, and close the gap."""
+def add(plan: ImagePlan, slot: str, position: int, *, origin: str, subject: str,
+        source_ref: str, local: str | Path, credit: str = "", license: str = "",
+        note: str = "") -> ImagePlan:
+    """Record an agent-chosen image against a gap, and close the gap."""
     plan.placements.append(Placement(
-        slot=slot, position=position, origin="web", subject=subject,
-        source_ref=url, src_path=str(local), credit=credit, license=license,
+        slot=slot, position=position, origin=origin, subject=subject,
+        source_ref=source_ref, src_path=str(local), credit=credit,
+        license=license, note=note,
     ))
     plan.gaps = [g for g in plan.gaps
                  if not (g.slot == slot and g.position == position)]
     return plan
+
+
+def add_web(plan: ImagePlan, slot: str, position: int, *, subject: str,
+            url: str, local: str | Path, credit: str = "",
+            license: str = "") -> ImagePlan:
+    """Record an agent-chosen web photo against a gap. The common case."""
+    return add(plan, slot, position, origin="web", subject=subject,
+               source_ref=url, local=local, credit=credit, license=license)
+
+
+def accept_undersized(plan: ImagePlan, image: PdfImage, day: int) -> ImagePlan:
+    """Ship a brochure photo the size gate would otherwise reject.
+
+    An escape hatch for the case where the deck holds the *right* photo of a
+    day's headline attraction and nothing else does. WBCKWE day 8 is the
+    example: Tongren Grand Canyon at 744×385 crops to 513px, under the 632
+    floor, and no catalogue or stock source carries that gorge at all — so
+    the choice is a soft-but-correct photo or a day with no picture of the
+    thing it is selling.
+
+    Deliberately explicit and deliberately noisy: it takes a named image,
+    and the note it writes shows up on the review page so the decision is
+    the reviewer's to overturn.
+    """
+    crop = image.crop_width(SECTION)
+    return add(plan, "section", day, origin="pdf", subject=image.subject,
+               source_ref=_ref(image), local=image.path,
+               credit="brochure", note=(
+                   f"below the {SECTION.min_source_width}px floor "
+                   f"({crop}px crop) — accepted because no other source "
+                   f"carries this landmark"))
 
 
 def materialise(plan: ImagePlan, out_dir: str | Path) -> ImagePlan:
