@@ -93,17 +93,18 @@ Less common. Triggered when existence_check returns travel == None.
    - Product Name (双语并排): product_name_en | product_name_cn
    - Highlight (动态多行): for each h in extracted_content.highlights:
        click "+ Add" → fill h.en | h.cn
-   - List Thumbnail: SKIP (v1 no image upload)
-   - Image Carousel: SKIP
-   - Cover Video Asset / Cover Video: SKIP
-   - Route Map: SKIP
+   - List Thumbnail / Image Carousel / Route Map: LEAVE EMPTY here.
+     `skybear-upload-images` fills them after the Planner approves the
+     review page — text first, images second, so a rejected gallery never
+     blocks the itinerary content from landing.
+   - Cover Video Asset / Cover Video: SKIP (still no source for video)
 4. Sections: for each s in extracted_content.sections (sort_num 0..N-1):
    click "+ Add Section"
    - Section Name (双语): "DAY {sort_num+1}" | "第{cn_num}天"
    - Section Title (双语): s.title_en | s.title_cn
    - Section Location (双语): s.location_en | s.location_cn
    - Section Description (双语): s.description_en | s.description_cn
-   - Image grid: SKIP
+   - Image grid: LEAVE EMPTY (filled by `skybear-upload-images`)
    - Trip Item: SKIP (Phase 0 unresolved structure)
 5. Dep Date & Price: should auto-populate after Save (see MODE REUSE step 5).
 6. Product Status / Publish for sale: **DO NOT TICK**.

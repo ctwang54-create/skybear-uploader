@@ -143,11 +143,24 @@ to "把这个配套上架到 skybear" / "create new tour code" / "上传配套�
 
 7. DRIVE UI
    Delegate to skybear-create-tourcode skill (Step 2).
-   Then delegate to skybear-update-display skill (Step 3).
+   Then delegate to skybear-update-display skill (Step 3) — text only.
 
-8. VERIFY
+8. IMAGES
+   Delegate to skybear-plan-images (Step 3a). It returns a review page and
+   STOPS. Send the page to the Planner and wait for an explicit approval —
+   a rendered preview is not consent.
+   On approval, delegate to skybear-upload-images (Step 3b).
+   The tour is complete-but-unpublished at this point, which is a valid
+   end state: if the Planner never approves the gallery, the itinerary
+   content is still safely in Skybear as a draft.
+
+9. VERIFY
    Delegate to skybear-verify skill.
    Final report: tour_id, draft URL, public-site visibility.
+
+10. PUBLISH GATE
+   Delegate to skybear-publish-gate. It walks the Planner through the
+   review and hands them the publish steps. It never publishes.
 ```
 
 ## Stop conditions (any of these = halt and inform Planner)
@@ -176,4 +189,7 @@ to "把这个配套上架到 skybear" / "create new tour code" / "上传配套�
 |---|---|
 | Browser Step 2 (Modal + Edit Page) | `skybear-create-tourcode` |
 | Browser Step 3 (Edit Display Detail + wt_travel_tour binding) | `skybear-update-display` |
+| Step 3a — pick and normalise images, render review page | `skybear-plan-images` |
+| Step 3b — upload images into the six display slots | `skybear-upload-images` |
 | Public-site verification | `skybear-verify` |
+| Draft → published human gate | `skybear-publish-gate` |

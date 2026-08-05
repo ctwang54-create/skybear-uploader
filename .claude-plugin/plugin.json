@@ -1,7 +1,7 @@
 {
   "name": "skybear-uploader",
-  "version": "0.2.0",
-  "description": "Upload Skybear travel package (G-Group) from a PDF brochure as draft. Defaults to production (travel.webuysg.com); UAT supported via env choice. Colleagues need only a Chrome login — no Python or DB credentials. Verified end-to-end on UAT 2026-05-08.",
+  "version": "0.3.0",
+  "description": "Upload a Skybear travel package (G-Group) from a PDF brochure as an unpublished draft, images included: pulls the brochure's own photos, fills the gaps from the web, normalises everything to 1440x1080 4:3, and renders a review page the Planner signs off before anything is uploaded. Never ticks Publish for sale.",
   "author": {
     "name": "wangchengtai"
   },

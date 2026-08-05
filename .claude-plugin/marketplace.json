@@ -5,16 +5,21 @@
   },
   "metadata": {
     "description": "Webuy 内部 Cowork plugins for Skybear travel package management",
-    "version": "0.1.0"
+    "version": "0.3.0"
   },
   "plugins": [
     {
       "name": "skybear-uploader",
       "source": ".",
-      "description": "Upload Skybear travel package (G-Group) from a PDF brochure as draft. Verified end-to-end on UAT 2026-05-08.",
-      "version": "0.1.0",
+      "description": "Upload Skybear travel package (G-Group) from a PDF brochure as an unpublished draft, with automatic image selection and upload.",
+      "version": "0.3.0",
       "category": "internal-tools",
-      "tags": ["skybear", "travel", "webuy", "package-upload"]
+      "tags": [
+        "skybear",
+        "travel",
+        "webuy",
+        "package-upload"
+      ]
     }
   ]
 }

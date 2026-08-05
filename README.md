@@ -11,6 +11,8 @@ clicks **Publish for sale** themselves.
 
 ## Status
 
+- **v0.3.0** — automatic images. PDF in → itinerary content **and** a full
+  gallery out, still all draft. See [Images](#images) below.
 - **v0.1.0** — Phase 1 (lib + 13/13 tests passing) + Phase 2 (4 skill manifests)
   + Phase 3 (live UAT dry-run verified end-to-end).
 - See parent [SPEC.md](../SPEC.md) for full design.
@@ -33,15 +35,25 @@ skybear-uploader/
 │   ├── config.py / db.py   # RO MySQL connection (Skybear slave)
 │   ├── existence_check.py  # 3 SELECT queries → ExistenceReport
 │   ├── pdf_extract_prompt.md   # multimodal extraction template
-│   └── selectors.yaml      # Skybear UI selector + per-finding mapping
+│   ├── selectors.yaml      # Skybear UI selector + per-finding mapping
+│   │
+│   ├── image_spec.py       # the house standard, and why each number is that
+│   ├── pdf_images.py       # extract + classify the brochure's own photos
+│   ├── photo_source.py     # web fallback, mirroring webuy-itinerary-creation
+│   ├── image_norm.py       # detail-aware 4:3 crop → 1440×1080 JPEG
+│   ├── image_plan.py       # slot assignment, gap tracking, materialise
+│   └── preview.py          # self-contained review page
 │
 ├── skills/
 │   ├── skybear-upload-package/SKILL.md      # parent (intake + chat + delegation)
 │   ├── skybear-create-tourcode/SKILL.md     # Step 2 (Modal → Edit Page → Submit)
 │   ├── skybear-update-display/SKILL.md      # Step 3 (Dep Date & Price binding)
-│   └── skybear-verify/SKILL.md              # Step 4 (admin URLs + public-site)
+│   ├── skybear-plan-images/SKILL.md         # Step 3a (pick + normalise + review)
+│   ├── skybear-upload-images/SKILL.md       # Step 3b (fill the six image slots)
+│   ├── skybear-verify/SKILL.md              # Step 4 (admin URLs + public-site)
+│   └── skybear-publish-gate/SKILL.md        # draft → published, by a human
 │
-├── tests/                  # 13 tests, all passing
+├── tests/                  # 28 tests, all passing
 │   ├── test_tour_code.py        # 4 unit tests (incl. UAT-verified samples)
 │   ├── test_pricing.py          # 4 unit tests (formula + 9-cost defaults)
 │   └── test_existence_check.py  # 5 integration tests (live UAT MySQL)
@@ -73,13 +85,57 @@ The skill will produce a single `.plugin` artifact for distribution.
 In a regular Cowork session, just say *"上传这个 PDF 到 Skybear"* (with a PDF
 attached) and the **`skybear-upload-package`** skill triggers automatically.
 
-## Known limitations (v1)
+## Images
+
+A brochure carries its own photos, and those beat any stock lookup on intent
+— they are what the product team chose. So the pipeline is PDF-first, with
+the web filling only what the deck can't cover.
+
+**What comes out of a brochure.** `pdf_images.extract()` sorts every embedded
+raster into `photo`, `route_map`, `cover_poster` or `furniture`. That
+classification is not cosmetic: page 1 of every deck is a rasterised poster
+with the tour title baked in, and every deck carries a pale-blue schematic
+route map. Both look like photographs to any colour statistic, and both would
+be obviously wrong in a carousel. The route map is genuinely useful, though —
+it goes straight into `wt_travel.route_map_url`, a slot v1 left empty.
+
+**Captions are not evidence.** `caption_hint` is the text nearest the image
+box, and it is wrong often enough to matter. In WBCURC the photo captioned
+"Tongren Grand Canyon 铜仁大峡谷" — a Guizhou landmark — is the Flaming
+Mountains in Turpan, because that deck was built from the Guizhou deck. Three
+of its nine captions named the wrong place. Subjects are decided by an agent
+looking at the photo, with the caption as a prior at most.
+
+**The house standard is measured, not assumed.** The Skybear admin UI
+suggests "1920×1080 (16:9)" for the carousel and nothing shipped follows it;
+sampling the OSS originals behind a live product gave 1080-class images at
+3:4, 4:3 and 9:16 mixed together. Everything now normalises to **4:3 at
+1440×1080** — the largest live tier, and the ratio that survives the wide
+hero crop. `lib/image_spec.py` carries the measurements behind every
+threshold, including why the upscale ceiling is 2.0 and not 1.65.
+
+**The web fallback needs keys to be any good.** It mirrors the rules in the
+sibling `webuy-itinerary-creation` repo — Shutterstock → Unsplash → Pexels →
+Wikimedia Commons, GPS-gated, judged on accuracy before beauty. With no keys
+set only Commons is reachable, and Commons is an archive rather than a photo
+library: a launch-sample run got mineral specimens for "Keketuohai", locator
+maps of China for "Urumqi", and a road sign for "Urho Ghost City". 4 of 48
+candidates were usable. Set `UNSPLASH_ACCESS_KEY` / `PEXELS_API_KEY` /
+`SHUTTERSTOCK_TOKEN` before relying on it.
+
+**Nothing uploads unreviewed.** `preview.py` renders a self-contained page
+showing every image with its provenance, upscale factor and the hero's actual
+wide crop. The Planner approves that page before `skybear-upload-images`
+runs, and separately ticks *Publish for sale* before anything is public.
+
+## Known limitations
 
 | Limitation | Workaround |
 |---|---|
 | `wt_tour.tl_tm_name` left NULL | Planner fills TM/TL in Skybear after Submit (leader-picker UI is custom; Phase 4 may automate) |
 | `wt_tour.airline_code` left "" | Planner fills "Main Airline" field on Edit Package after Submit |
-| Image carousel / cover video / List Thumbnail / Route Map not uploaded | v1 reuses existing wt_travel; for NEW wt_travel, Planner uploads images manually |
+| Cover Video Asset / Cover Video still not filled | No video source exists; the portrait 9:16 still is specced in `image_spec.COVER_PORTRAIT` but unused |
+| Image upload selectors unverified against a live page | v1 skipped all six slots, so no run has driven them. First run is an inventory pass — see `skybear-upload-images` §"Not yet verified" |
 | Trip Items inside Sections not auto-created | description field includes attractions inline |
 | `pax_type ≠ 1` (G-Group) not supported | Aborted with error; FIT/MICE/etc. → v2 |
 | `webuytravel.sg` is production; UAT changes don't show there | Verify step reports "not visible (expected for draft)" |
