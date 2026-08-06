@@ -370,3 +370,83 @@ phase_3_evidence:
     wt_travel_id: 149
     wt_travel_tour_id: 27935
     test_data_status: "DRAFT (tr_status=0, travel_status=0); will need cleanup or repurpose later"
+
+# Phase 4 — first real run against PROD Create Display Detail (2026-08-06,
+# user ittest). Everything below was observed live; several items contradict
+# the Phase 0 inventory, which was taken from the EDIT page of an existing
+# record rather than the CREATE form.
+phase_4_prod_findings:
+  create_route:
+    description: "The Creat/Publish button did not navigate when clicked. The create form is reachable directly."
+    url: "/#/packageDisplayMgmt/editDisplayDetail?type=add"
+    note: "SPA hash routing — set location.hash then location.reload()."
+    confirmed: true
+
+  publish_defaults_to_TICKED_on_create:
+    description: >
+      On the CREATE form `productForm.publishStatus` initialises to **true**
+      and the "Publish for sale" checkbox renders already ticked. Phase 0
+      recorded the opposite, because it inspected the edit page of a record
+      that was already a draft.
+    impact: >
+      "Never tick the box" is not enough on create — it is already ticked, so
+      a plain save publishes the product immediately. The plugin must
+      explicitly set publishStatus = false and re-read the checkbox to
+      confirm before saving.
+    confirmed: true
+    severity: critical
+
+  carousel_is_two_slots:
+    description: >
+      There is no single "Image Carousel". The form has Mobile Display Image
+      and Desktop Display Image, and every product ships both.
+    ui_recommended: {mobile: "1080x1920 (9:16)", desktop: "1920x1080 (16:9)",
+                     thumbnail: "554x400 (277:200)", cover_video_asset: "986x1752"}
+    live_practice: {mobile: "1080x1440..1620 (0.66-0.75)", desktop: "1012x847..1732x1080 (1.19-1.60)"}
+    note: "The hints and the shipped catalogue disagree; live products follow neither 9:16 nor 16:9."
+    confirmed: true
+
+  bilingual_key_is_zh_not_cn:
+    description: >
+      Section name/title/location/description are {en, zh} objects, and
+      highlights are {highlightsEn, highlightsZh}. Product name is the odd
+      one out: {enName, chName}.
+    impact: "Writing .cn silently does nothing — the field stays empty and validation fails at save."
+    confirmed: true
+
+  product_name_rejects_ampersand:
+    description: >
+      productFormRules.name runs a custom validator that fails on any '&' in
+      either language: "Cannot contain &". Brochure titles routinely have one
+      ("9D8N GUIZHOU & CHONGQING WONDERS TOUR").
+    workaround: "Replace with 'and' (or a middot) in the product name only; highlights and sections accept &."
+    confirmed: true
+
+  save_requires_an_existing_tour:
+    description: >
+      travelMgmt/editTravel returns 500 "tourId Cannot be empty" when the
+      TourType has no wt_tour rows. page.tourList was empty for WBCKWE.
+    impact: >
+      A wt_travel cannot be created for a TourType with no departures. The
+      NEW-mode path in skybear-update-display therefore depends on Step 2
+      (skybear-create-tourcode) having run first — which needs departure
+      date, airline, flights, inventory and price from the Planner.
+    confirmed: true
+    severity: blocking
+
+  image_inputs_accept_synthetic_files:
+    description: >
+      Each slot is an el-upload with a plain input[type=file]. Assigning
+      input.files from a DataTransfer and dispatching a 'change' event is
+      accepted; the component stores {file, preview:dataURL} locally and
+      uploads on Save. Files can be fetched from http://127.0.0.1 — Chrome
+      exempts loopback from mixed-content blocking — which is how the plugin
+      can feed locally-generated crops without a file picker.
+    confirmed: true
+
+  save_button_is_ambiguous:
+    description: >
+      Four buttons read Save/Confirm; three belong to hidden dialogs (the
+      New Inquiry dialog among them) and clicking those fires that dialog's
+      validation instead. Select with :not(.el-dialog *) or check visibility.
+    confirmed: true

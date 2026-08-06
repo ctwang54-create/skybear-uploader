@@ -10,14 +10,22 @@ tours we upload) gave:
     1080×1923 (9:16) ×3      1012× 847 (thumb)
     200–900 KB JPEG, served from prod-webuysg.oss.webuy.ren/travel-video/
 
-So the real house scale is a **1080-class short edge**, with mixed aspect
-ratios — which is exactly why the live catalogue looks inconsistent. The
-product page crops the first carousel image into a very wide hero band, and a
-9:16 portrait loses most of its frame there.
+The mixed ratios initially read as inconsistency. They are not. Opening Edit
+Display Detail on a live product (2026-08-06) showed the carousel is **two
+slots, not one**:
 
-Decision (2026-08-05, with wangchengtai): normalise everything to **4:3
-landscape at 1440×1080**. It matches the largest live tier, survives the hero
-crop, and makes the carousel uniform.
+    Mobile Display Image    1080×1440 … 1080×1620   portrait, ar 0.66–0.75
+    Desktop Display Image   1012×847 … 1732×1080    landscape, ar 1.19–1.60
+    List Thumbneil          554×400                 landscape, ar 1.38
+
+So every image ships twice, cropped for the device it will be seen on. The
+Phase 0 field inventory predates this — it lists a single "Image Carousel"
+mapped to `wt_travel_image (image_type=1)`.
+
+Decision (2026-08-05/06, with wangchengtai): one ratio per slot, cropped
+from the original each time rather than re-cropping the landscape version —
+**4:3 landscape at 1440×1080** for desktop, **3:4 portrait at 1080×1440**
+for mobile.
 """
 
 from dataclasses import dataclass
@@ -66,9 +74,17 @@ _MAX_BYTES = 5 * 1024 * 1024
 # regions, so this bar is at or above what ships today.
 CAROUSEL = SlotSpec("carousel", 1440, 1080, _MAX_BYTES, 86, 10, max_upscale=2.0)
 
+# Mobile Display Image — the phone half of the carousel. Portrait, because
+# the phone layout gives it the full viewport height; feeding it the
+# landscape crop would letterbox every slide. Cropped from the original
+# source, never from the desktop JPEG, or it would be a 4:3 frame squeezed
+# into 3:4 with most of the subject gone.
+CAROUSEL_MOBILE = SlotSpec("carousel_mobile", 1080, 1440, _MAX_BYTES, 86, 10,
+                           max_upscale=2.0)
+
 # List Thumbnail → wt_travel.list_thumbneil (sic — the column really is
-# misspelled). Live thumb is 1012×847 ≈ 6:5; 4:3 sits close and keeps one
-# ratio across the whole product.
+# misspelled). Live thumb is 554×400 ≈ 1.38, so 4:3 is close and lets the
+# thumbnail reuse a desktop carousel frame.
 THUMBNAIL = SlotSpec("thumbnail", 1440, 1080, _MAX_BYTES, 86, 1, max_upscale=2.0)
 
 # Per-day Image Grid → wt_travel_section_image. Rendered as small tiles, so
