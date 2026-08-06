@@ -26,6 +26,7 @@ import json
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
 from .image_norm import normalise
@@ -307,6 +308,102 @@ def accept_undersized(plan: ImagePlan, image: PdfImage, day: int) -> ImagePlan:
                    f"below the {SECTION.min_source_width}px floor "
                    f"({crop}px crop) — accepted because no other source "
                    f"carries this landmark"))
+
+
+def _dhash(path: str | Path, size: int = 16) -> np.ndarray:
+    """Perceptual hash — a gradient signature that survives re-cropping.
+
+    Two crops of the same photograph, or the same photo at two sizes, land
+    within a few bits of each other; genuinely different photos of the same
+    landmark do not.
+    """
+    with Image.open(path) as im:
+        grey = im.convert("L").resize((size + 1, size), Image.LANCZOS)
+    pixels = np.asarray(grey, dtype=np.int16)
+    return (pixels[:, 1:] > pixels[:, :-1]).flatten()
+
+
+# Bits of difference below which two images read as the same picture. 16×16
+# dhash gives 240 bits; identical files score 0, re-crops of one photo score
+# 1–4, and distinct photos of one landmark measured 40+ across the launch
+# samples. 12 sits well inside that gap.
+DUPLICATE_BITS = 12
+
+
+def dedupe(plan: ImagePlan, *, cross_slot: bool = True,
+           slot_priority: tuple[str, ...] =
+           ("section", "route_map", "thumbnail", "carousel")) -> list[str]:
+    """Drop repeats. Returns a human-readable list of what went.
+
+    Two failure modes, both of which shipped in the first launch build and
+    both of which a reviewer spots instantly:
+
+    * **The same file in two slots.** The carousel was composed out of the
+      day grids, so every carousel image was byte-identical to a section
+      image. The live catalogue does not do this — its Desktop Display
+      Images and its Section Photos are different pictures — and a customer
+      scrolling one page sees the repeat.
+    * **The same subject twice in one day.** Pulling every catalogue match
+      for a landmark put three Maling River Canyon shots on day 5.
+
+    Slot priority decides who keeps a contested image, and **sections win**.
+    A day with no picture of the thing it is selling is a worse page than a
+    carousel one slide shorter, and the carousel can always be refilled from
+    the leftover pool — a specific landmark on a specific day cannot.
+
+    Set `cross_slot=False` when there is no leftover pool to refill from.
+    WBCHET is the case: nothing published covers Shanxi, so its only images
+    are the four in the brochure plus a handful off Commons. Enforcing
+    cross-slot uniqueness there empties the carousel down to one slide,
+    which is worse than a carousel that reprises the day photos. Within-day
+    repeats are still removed either way — three shots of one waterfall side
+    by side is the failure a reviewer actually notices.
+    """
+    order = {slot: i for i, slot in enumerate(slot_priority)}
+    ranked = sorted(
+        [p for p in plan.placements if p.src_path],
+        key=lambda p: (order.get(p.slot, 99), p.position),
+    )
+
+    removed: list[str] = []
+    kept: list[tuple[Placement, np.ndarray]] = []
+    subjects_per_day: dict[tuple[str, int], set[str]] = {}
+
+    for placement in ranked:
+        try:
+            signature = _dhash(placement.src_path)
+        except (OSError, ValueError):
+            kept.append((placement, None))
+            continue
+
+        twin = next((k for k, sig in kept
+                     if sig is not None
+                     and (cross_slot or k.slot == placement.slot)
+                     and int((sig != signature).sum()) <= DUPLICATE_BITS), None)
+        if twin is not None:
+            removed.append(f"{placement.slot}#{placement.position} "
+                           f"{placement.subject} — same picture as "
+                           f"{twin.slot}#{twin.position}")
+            continue
+
+        key = (placement.slot, placement.position)
+        seen = subjects_per_day.setdefault(key, set())
+        if placement.subject and placement.subject in seen:
+            removed.append(f"{placement.slot}#{placement.position} "
+                           f"{placement.subject} — subject already shown here")
+            continue
+        seen.add(placement.subject)
+        kept.append((placement, signature))
+
+    keep_ids = {id(p) for p, _ in kept}
+    plan.placements = [p for p in plan.placements
+                       if not p.src_path or id(p) in keep_ids]
+
+    # Carousel positions must stay contiguous — position 0 is the hero.
+    for i, placement in enumerate(sorted(plan.of("carousel"),
+                                         key=lambda p: p.position)):
+        placement.position = i
+    return removed
 
 
 def materialise(plan: ImagePlan, out_dir: str | Path) -> ImagePlan:
